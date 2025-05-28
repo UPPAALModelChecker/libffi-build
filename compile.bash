@@ -26,7 +26,7 @@ if [ "$#" -lt 1 ]; then
 fi
 
 if [ ! -f "$PROJECT_DIR/toolchains/README.md" ]; then
-    pushd "$PROJECT/toolchains"
+    pushd "$PROJECT_DIR/toolchains"
     git submodule update --init --recursive
     popd
 fi

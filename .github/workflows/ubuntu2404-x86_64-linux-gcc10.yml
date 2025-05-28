@@ -1,0 +1,28 @@
+---
+name: ubuntu2404-x86_64-linux-gcc10
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Tools
+        run: |
+          sudo apt-get -qq update
+          sudo apt-get -qq install gcc-10 make automake autoconf libltdl-dev perl curl
+
+      - name: Compile
+        run: ./compile.bash x86_64-linux-gcc10

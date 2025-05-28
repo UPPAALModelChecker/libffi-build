@@ -1,0 +1,48 @@
+---
+name: ubuntu2404-x86_64-w64-mingw32
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Tools
+        run: |
+          sudo apt-get -qq update
+          sudo apt-get -qq install wine mingw-w64-tools g++-mingw-w64-x86-64 mingw-w64-x86-64-dev gcc-mingw-w64-x86-64 make automake autoconf libltdl-dev perl curl
+          sudo update-alternatives --set x86_64-w64-mingw32-gcc /usr/bin/x86_64-w64-mingw32-gcc-posix
+          sudo update-alternatives --set x86_64-w64-mingw32-g++ /usr/bin/x86_64-w64-mingw32-g++-posix
+
+      - name: Setup Wine
+        run: |
+          sudo apt-get -qq install wine-binfmt binfmt-support  # wine needs to installed already
+          sudo update-binfmts --disable cli  # disable mono attempts to execute windows binaries
+          sudo update-binfmts --import /usr/share/binfmts/wine  # enable wine to execute windows binaries
+          echo "WINARCH=win64" >> $GITHUB_ENV
+          echo "WINEDEBUG=fixme-all,-all" >> $GITHUB_ENV
+          GCC_S_FILE=$(x86_64-w64-mingw32-g++ --print-file-name libgcc_s.a)
+          GCC_S_FILE=$(realpath "$GCC_S_FILE")
+          GCC_RUNTIME_PATH=$(dirname "$GCC_S_FILE")
+          GCC_RUNTIME_WINEPATH=$(winepath --windows "$GCC_RUNTIME_PATH")
+          WINPTHREAD_FILE=$(x86_64-w64-mingw32-g++ --print-file-name libwinpthread-1.dll)
+          WINPTHREAD_FILE=$(realpath "$WINPTHREAD_FILE")
+          MINGW_RUNTIME_PATH=$(dirname "$WINPTHREAD_FILE")
+          MINGW_RUNTIME_WINEPATH=$(winepath --windows "$MINGW_RUNTIME_PATH")
+          echo "WINEPATH=${GCC_RUNTIME_WINEPATH};${MINGW_RUNTIME_WINEPATH}" >> $GITHUB_ENV
+
+      - name: Compile
+        run: ./compile.bash x86_64-w64-mingw32
