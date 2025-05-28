@@ -25,6 +25,12 @@ if [ "$#" -lt 1 ]; then
     exit 1
 fi
 
+if [ ! -f "$PROJECT_DIR/toolchains/README.md" ]; then
+    pushd "$PROJECT/toolchains"
+    git submodule update --init --recursive
+    popd
+fi
+
 for TOOLCHAIN in "$@" ; do
 
     [ "$TOOLCHAIN" == "native" ] || source "$PROJECT_DIR/toolchains/$TOOLCHAIN.bash"
@@ -50,7 +56,7 @@ for TOOLCHAIN in "$@" ; do
 
     echo "Building $SOURCE with the following:"
     for var in TOOLCHAIN SOURCE_DIR BUILD_DIR PREFIX CC CXX CFLAGS CXXFLAGS ADDRM MTUNE CMAKE_TOOLCHAIN_FILE CMAKE_PREFIX_PATH CMAKE_INSTALL_PREFIX CMAKE_BUILD_TYPE URL ; do
-        echo "  $var=${!var}"
+        echo "  $var=${!var-(unset)}"
     done
 
     pushd "$PROJECT_DIR"
