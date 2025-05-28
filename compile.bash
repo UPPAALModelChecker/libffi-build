@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
-SOURCE="libffi-3.4.2"
+SOURCE="libffi-3.4.8"
 PACKAGE="$SOURCE.tar.gz"
 URL="https://github.com/libffi/libffi/archive/v${SOURCE#libffi-}.tar.gz"
-SHA256="0acbca9fd9c0eeed7e5d9460ae2ea945d3f1f3d48e13a4c54da12c7e0d23c313"
-TESTFILE="lib/libffi.a"
+SHA256="cbb7f0b3b095dc506387ec1e35b891bfb4891d05b90a495bc69a10f2293f80ff"
+TESTFILE="include/ffi.h"
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -15,6 +15,12 @@ CUSTOM_PREFIX="$PREFIX"
 CUSTOM_MTUNE="$MTUNE"
 CUSTOM_ADDRM="$ADDRM"
 
+if [ ! -f "$PROJECT_DIR/toolchains/README.md" ]; then
+    pushd "$PROJECT_DIR/toolchains" > /dev/null
+    git submodule update --init --recursive
+    popd > /dev/null
+fi
+
 if [ "$#" -lt 1 ]; then
     echo "Specify toolchain(s) as argument(s). Supported toolchains:"
     echo "  native (detect default tools)"
@@ -23,12 +29,6 @@ if [ "$#" -lt 1 ]; then
         echo "  ${filename%%.bash}"
     done
     exit 1
-fi
-
-if [ ! -f "$PROJECT_DIR/toolchains/README.md" ]; then
-    pushd "$PROJECT_DIR/toolchains"
-    git submodule update --init --recursive
-    popd
 fi
 
 for TOOLCHAIN in "$@" ; do
@@ -60,20 +60,25 @@ for TOOLCHAIN in "$@" ; do
     done
 
     pushd "$PROJECT_DIR"
-    [ -f "$PACKAGE" ] || curl --silent --location --output "$PACKAGE" "$URL"
-
-    echo "$SHA256  $PACKAGE" | shasum --algorithm 256 --check || { echo "Checksum failed"; echo "    expected: $SHA256"; echo "    got     : $(shasum -a 256 "$PACKAGE")"; exit 2; }
+    if [ ! -f "$PACKAGE" ]; then
+         curl --silent --location --output "$PACKAGE" "$URL"
+         echo "$SHA256  $PACKAGE" | shasum --algorithm 256 --check || { echo "Checksum failed"; echo "    expected: $SHA256"; echo "    got     : $(shasum -a 256 "$PACKAGE")"; exit 2; }
+    fi
 
     [ -d "$SOURCE" ] || tar xf "$PACKAGE"
     if [ ! -x "$SOURCE/configure" ]; then
-        pushd "$SOURCE"
+        pushd "$SOURCE" > /dev/null
         ./autogen.sh
-        popd
+        popd > /dev/null
     fi
 
     mkdir -p "$BUILD_DIR" && pushd "$BUILD_DIR"
 
-    "$SOURCE_DIR/configure" --prefix="$PREFIX" --libdir="$PREFIX/lib" --disable-multi-os-directory --enable-static --disable-shared --includedir="$PREFIX/include" CFLAGS="-mtune=$MTUNE -m$ADDRM -fPIC" CXXFLAGS="-mtune=$MTUNE -m$ADDRM -fPIC" --host=$TARGET || { echo "Configure failed." ; exit 1; }
+    if [ ! -r "$BUILD_DIR/Makefile" ]; then
+        "$SOURCE_DIR/configure" --prefix="$PREFIX" --libdir="$PREFIX/lib" --disable-multi-os-directory --enable-static --disable-shared --includedir="$PREFIX/include" CFLAGS="-mtune=$MTUNE -m$ADDRM -fPIC" CXXFLAGS="-mtune=$MTUNE -m$ADDRM -fPIC" --host=$TARGET || { echo "Configure failed." ; exit 1; }
+    else
+        echo "Skipping configure: Makefile is already in $BUILD_DIR"
+    fi
     make -j$CORES || { echo "Build failed." ; exit 1; }
     make install || { echo "Install failed." ; exit 1; }
     rm -f "$PREFIX"/lib/libffi.so* 	# delete dynamic libraries to force static linking
