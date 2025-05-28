@@ -1,0 +1,3 @@
+[submodule "scripts/toolchains"]
+	path = scripts/toolchains
+	url = git@github.com:UPPAALModelChecker/toolchains.git
