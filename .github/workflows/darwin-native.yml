@@ -2,10 +2,11 @@
 name: darwin-native
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  workflow_dispatch:
+#  push:
+#    branches: [ "main" ]
+#  pull_request:
+#    branches: [ "main" ]
 
 env:
   BUILD_TYPE: Release
@@ -26,7 +27,7 @@ jobs:
       - name: Install Tools
         run: |
           brew update
-          brew install gcc make automake autoconf perl curl coreutils bash
+          brew install gcc make texinfo automake autoconf perl curl coreutils bash
 
       - name: Compile
         run: ./compile.bash native
