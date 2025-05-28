@@ -1,3 +1,7 @@
+libffi-*
+build-*
+local-*
+*~
 # Prerequisites
 *.d
 
